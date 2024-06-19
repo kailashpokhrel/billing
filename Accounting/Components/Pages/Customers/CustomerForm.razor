@@ -1,0 +1,77 @@
+﻿@inject ICustomerRepo CustomerRepo
+@inject IStringLocalizer<Accounting.Locales.AppResource> Localizer
+@if (customer is not null)
+{
+
+    <EditForm Enhance="true" method="post" FormName="AddOrEditCustomerForm" OnValidSubmit="AddOrEditCustomer" Model="customer" autocomplete="off">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="row">
+            <div class="form-group mb-3 col-4">
+                <label for="Name">@Localizer["Name"] </label>
+                <InputText id="Name" class="form-control" @bind-Value="customer.Name" />
+                <ValidationMessage For="@(() => customer.Name)" />
+            </div>
+            <div class="form-group mb-3 col-4">
+                <label for="Mobile">@Localizer["Mobile"] </label>
+                <InputText id="Mobile" class="form-control" @bind-Value="customer.Mobile" />
+                <ValidationMessage For="@(() => customer.Mobile)" />
+            </div>
+            <div class="form-group mb-3 col-4">
+                <label for="Email">@Localizer["Email"]</label>
+                <InputText id="Email" class="form-control" @bind-Value="customer.Email" />
+                <ValidationMessage For="@(() => customer.Email)" />
+            </div>
+            <div class="form-group mb-3 col-4">
+                <label for="Address">@Localizer["Address"]</label>
+                <InputText id="Address" class="form-control" @bind-Value="customer.Address" />
+                <ValidationMessage For="@(() => customer.Address)" />
+            </div>
+            <div class="form-group mt-3 col-4">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </EditForm>
+}
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int CustomerId { get; set; }
+
+    [Parameter]
+    public EventCallback<Customer>
+    OnValidCustomerSubmit
+    { get; set; }
+
+    [SupplyParameterFromForm]
+    public Customer? customer { get; set; }
+
+
+
+    private string Title => IsEditMode ? $"Edit Customer" : "Add New Customer";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+
+            customer = await CustomerRepo.GetByIdAsync(CustomerId);
+
+
+        }
+        else
+        {
+            customer ??= new();
+
+        }
+
+
+    }
+
+    private async Task AddOrEditCustomer()
+    {
+        await OnValidCustomerSubmit.InvokeAsync(customer);
+    }
+}

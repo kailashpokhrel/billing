@@ -1,0 +1,40 @@
+﻿@page "/ledger/create"
+@inject ILedgerRepo LedgerRepo
+@inject NavigationManager NavigationManager
+
+<Card>
+    <CardHeader>
+        Ledger Create
+    </CardHeader>
+    <CardBody>
+        <LedgerForm IsEditMode="false" OnValidLedgerSubmit="AddLedger" />
+    </CardBody>
+</Card>
+@code {
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+
+    private async Task AddLedger(Ledger ledger)
+    {
+        try
+        {
+            PreloadService.Show();
+            await LedgerRepo.CreateAsync(ledger);
+            ToastService.Notify(new(ToastType.Success, $"Ledger saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/ledgers");
+        }
+        catch (Exception ex)
+        {
+            // handle exception
+
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}
+

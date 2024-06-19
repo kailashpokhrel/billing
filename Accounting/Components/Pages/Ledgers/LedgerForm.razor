@@ -1,0 +1,116 @@
+﻿@inject ILedgerRepo LedgerRepo
+@inject ICustomerRepo CustomerRepo
+@inject IStringLocalizer<Accounting.Locales.AppResource> Localizer
+
+@if (ledger is not null)
+{
+    <EditForm Enhance="true" method="post" FormName="AddOrEditLedgerForm" OnValidSubmit="AddOrEditLedger" Model="ledger" autocomplete="off">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="row">
+            <div class="form-group mb-3 col-4">
+                <label for="TransactionDate">@Localizer["TransactionDate"]</label>
+                <InputDate id="TransactionDate" class="form-control" @bind-Value="ledger.TransactionDate" />
+                <ValidationMessage For="@(() => ledger.TransactionDate)" />
+            </div>
+            <div class="form-group mb-3 col-4">
+                <label for="NpTransactionDate">@Localizer["TransactionDateNepali"]</label>
+                <InputText id="NpTransactionDate" class="form-control" @bind-Value="ledger.NpTransactionDate" />
+                <ValidationMessage For="@(() => ledger.NpTransactionDate)" />
+            </div>
+            <div class="form-group mb-3 col-4">
+                <label for="CustomerId" class="form-label">@Localizer["Customer"]:</label>
+                <select id="CustomerId" @bind="@ledger.CustomerId" class="form-select shadow-none">
+                    <option value="">Select</option>
+                    @{
+                        if (customers is not null)
+                        {
+                            foreach (var customer in customers)
+                            {
+                                <option value="@customer.CustomerId">@customer.Name</option>
+                            }
+                        }
+                    }
+                </select>
+                <ValidationMessage For="@(() => ledger.CustomerId)" />
+            </div>
+            <div class="form-group mb-3 col-4">
+                <label for="Particulars">@Localizer["Particular"]</label>
+                <InputText id="Particulars" class="form-control" @bind-Value="ledger.Particulars" />
+                <ValidationMessage For="@(() => ledger.Particulars)" />
+            </div>
+            <div class="form-group mb-3 col-4">
+                <label for="DebitCredit">@Localizer["DebitCredit"]</label>
+                <InputSelect id="DebitCredit" class="form-control" @bind-Value="ledger.DebitCredit">
+                    <option value="">Select...</option>
+                    <option value="D">Debit</option>
+                    <option value="C">Credit</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => ledger.DebitCredit)" />
+            </div>
+            <div class="form-group mb-3 col-4">
+                <label for="DebitAmount">
+                    @Localizer["DebitAmount"]
+                </label>
+                <InputNumber id="DebitAmount" class="form-control" @bind-Value="ledger.DebitAmount" />
+                <ValidationMessage For="@(() => ledger.DebitAmount)" />
+            </div>
+            <div class="form-group mb-3 col-4">
+                <label for="CreditAmount">@Localizer["CreditAmount"]</label>
+                <InputNumber id="CreditAmount" class="form-control" @bind-Value="ledger.CreditAmount" />
+                <ValidationMessage For="@(() => ledger.CreditAmount)" />
+            </div>
+            <div class="form-group mt-3 col-4">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </EditForm>
+}
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int TransactionId { get; set; }
+
+    [Parameter]
+    public EventCallback<Ledger>
+    OnValidLedgerSubmit
+    { get; set; }
+
+    [SupplyParameterFromForm]
+    public Ledger? ledger { get; set; }
+    public List<Customer> customers { get; set; }
+
+    private string Title => IsEditMode ? $"Edit Ledger" : "Add New Ledger";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+
+            ledger = await LedgerRepo.GetByIdAsync(TransactionId);
+
+
+        }
+        else
+        {
+            ledger ??= new();
+
+        }
+
+
+        await LoadCustomers();
+
+    }
+    private async Task LoadCustomers()
+    {
+        var clients = await CustomerRepo.GetAllAsync();
+        customers = clients.ToList();
+    }
+
+    private async Task AddOrEditLedger()
+    {
+        await OnValidLedgerSubmit.InvokeAsync(ledger);
+    }
+}

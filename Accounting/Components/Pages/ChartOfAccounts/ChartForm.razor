@@ -1,0 +1,118 @@
+﻿@inject IChartOfAccountRepo ChartOfAccountRepo
+@inject IStringLocalizer<Accounting.Locales.AppResource> Localizer
+
+
+@if (ChartOfAccount is not null)
+{
+    <div class="container">
+        <EditForm Enhance="true" method="post" FormName="AddOrEditChartAccountForm" OnValidSubmit="AddOrEditChartAccount" Model="ChartOfAccount" autocomplete="off">
+
+            @if (IsEditMode)
+            {
+                <input type="hidden" name="ChartOfAccount.AccountID" value="@ChartOfAccount.AccountID" />
+
+            }
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <label for="AccountCode" class="form-label">
+                        @Localizer["AccountCode"]
+                    </label>
+                    <InputText @bind-Value="ChartOfAccount.AccountCode" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => ChartOfAccount.AccountCode)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="AccountName" class="form-label">
+                        @Localizer["AccountName"]
+                    </label>
+                    <InputText @bind-Value="ChartOfAccount.AccountName" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => ChartOfAccount.AccountName)" />
+                </div>
+
+            </div>
+            <div class="row">
+
+
+                <div class="mb-3 col-4">
+                    <label for="Description" class="form-label">
+                        @Localizer["Description"]
+                    </label>
+                    <InputText @bind-Value="ChartOfAccount.Description" class="form-control shadow-none">
+
+                    </InputText>
+                    <ValidationMessage For="@(() => ChartOfAccount.Description)" />
+                </div>
+           
+                <div class="mb-3 col-4">
+                    <label for="AccountType" class="form-label">
+                        @Localizer["AccountType"]
+                    </label>
+                    <select id="AccountType" @bind="@ChartOfAccount.AccountType" class="form-select shadow-none">
+                        <option value="Expense">Expense</option>
+                        <option value="Asset">Asset</option>
+                        <option value="Equity">Equity</option>
+                        <option value="Liability">Liability</option>
+                        <option value="Revenue">Revenue</option>
+
+                    </select>
+                    <ValidationMessage For="@(() => ChartOfAccount.AccountType)" />
+                </div>
+
+
+            </div>
+
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <button class="btn btn-primary shadow-none mb-3">
+                        Submit
+                    </button>
+                    <a href="chartofaccount" class="btn btn-secondary shadow-none mb-3"> @Localizer["Back to List"]</a>
+                </div>
+
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+            </div>
+
+        </EditForm>
+    </div>
+
+}
+
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int ChartAccountId { get; set; }
+
+    [Parameter]
+    public EventCallback<ChartOfAccount> OnValidChartAccountSubmit { get; set; }
+
+    [SupplyParameterFromForm]
+    public ChartOfAccount? ChartOfAccount { get; set; }
+
+    private string Title => IsEditMode ? $"Edit ChartAccount {ChartOfAccount?.AccountID}" : "Add New ChartAccount";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+
+            ChartOfAccount = await ChartOfAccountRepo.GetChartOfAccountAsync(ChartAccountId);
+
+
+        }
+        else
+        {
+            ChartOfAccount ??= new();
+
+        }
+
+
+    }
+
+    private async Task AddOrEditChartAccount()
+    {
+        await OnValidChartAccountSubmit.InvokeAsync(ChartOfAccount);
+    }
+}

@@ -1,0 +1,594 @@
+﻿@using Accounting.Services
+@inject IPurchaseEntryRepo PurchaseEntryRepo
+@inject ICustomerRepo CustomerRepo
+@inject IPurchaseItemRepo PurchaseItemRepo
+@inject IChartOfAccountRepo ChartOfAccountRepo
+@inject IPartyRepo PartyRepo
+@inject ISettingRepo SettingRepo
+@inject IStringLocalizer<Accounting.Locales.AppResource> Localizer
+@inject IJSRuntime JS
+@using NepDate 
+
+<style>
+    .read-only-textbox {
+        background-color: #f2f2f2; 
+        color: #333; 
+    }
+</style>
+
+@if (purchaseEntry is not null)
+{
+     <ConfirmDialog @ref="dialog" />
+    <div class="container">
+        <EditForm Enhance="true" method="post" FormName="AddOrEditExpenseEntryForm" OnValidSubmit="AddOrEditExpenseEntry" Model="purchaseEntry" autocomplete="off">
+
+            @if (IsEditMode)
+            {
+                <input type="hidden" name="purchaseEntry.BillID" value="@purchaseEntry.BillID" />
+            }
+            
+ 
+        <div class="row bg-purple">
+           
+            <div class="col-md-6 text-md-left">
+                <div class="form-group row" style="margin-bottom:5px">
+                     <label for="YearRange" class="col-md-4 col-form-label align-self-center"> @Localizer["FiscalYear"]:</label>
+                      <div class="col-md-4">
+                     <InputText id="YearRange" @bind-Value="@yearRange" class="form-control read-only-textbox" readonly />
+                     </div>
+                   
+                </div>
+                <div class="form-group row" style="margin-bottom:5px">
+                    <label class="col-md-4 col-form-label align-self-center">@Localizer["BillNumber"] :    </label>
+                     <div class="col-md-4">
+                     <InputText id="BillNumber" @bind-Value="@purchaseEntry.BillNumber" class="form-control read-only-textbox" />
+                     </div>
+                   
+                </div>
+            </div>
+            <div class="col-md-6 text-md-right">
+                    <div class="form-group row" style="margin-bottom:5px">
+                       <label class="col-md-4 col-form-label align-self-center">@Localizer["Date(English)"]:</label>
+                        <div class="col-md-4">
+                        <InputText @bind-Value="@currentDateAsString" class="form-control read-only-textbox" />
+                        </div>
+                    </div>
+                    <div class="form-group row" style="margin-bottom:5px">
+                       <label class="col-md-4 col-form-label align-self-center">@Localizer["Date(Nepali)"]: </label>
+                         <div class="col-md-4">
+                     <InputText @bind-Value="@currentNepaliDateAsString" class="form-control read-only-textbox" />
+                      </div>
+                          
+                    </div>
+            </div>
+        </div>
+
+        <hr />
+
+            <div class="row">
+                <div class="col-md-6">
+                   
+                        <div class="form-group row" style="margin-bottom:5px">
+                        <label for="VendorName"  class="col-md-4 col-form-label align-self-center">
+                            @Localizer["VendorName"]
+                        </label>
+                          <div class="col-md-6">
+                        <select id="VendorName" value="@purchaseEntry.VendorName" class="form-select shadow-none" @onchange="@(e => HandleVendorNameSelection(e))">
+                                <option value="">@Localizer["SelectVendor"]</option>
+                            @if (Parties is not null)
+                            {
+                                foreach (var party in Parties)
+                                {
+                                    <option value="@party.Name">@party.Name</option>
+                                }
+                            }
+                        </select>
+                        <ValidationMessage For="@(() => purchaseEntry.VendorName)" />
+                            </div>
+                    </div>
+                    <div class="form-group row" style="margin-bottom:5px">
+                        <label for="PANNumber" class="col-md-4 col-form-label align-self-center">@Localizer["PAN"]:</label>
+                        <div class="col-md-6">
+                            <InputText id="PANNumber" @bind-Value="@purchaseEntry.PANNumber" class="form-control read-only-textbox" />
+                            <ValidationMessage For="@(() => purchaseEntry.PANNumber)" />
+                        </div>
+                    </div>
+                    <div class="form-group row" style="margin-bottom:5px">
+                        <label for="VendorContactPerson" class="col-md-4 col-form-label align-self-center">@Localizer["VendorContactPerson"]:</label>
+                        <div class="col-md-6">
+                            <InputText id="Address" @bind-Value="@purchaseEntry.VendorContactPerson" class="form-control read-only-textbox" />
+                            <ValidationMessage For="@(() => purchaseEntry.VendorContactPerson)" />
+                        </div>
+                    </div>                     <div class="form-group row" style="margin-bottom:5px">
+                        <label for="VendorAddress" class="col-md-4 col-form-label align-self-center">@Localizer["Address"]":</label>
+                        <div class="col-md-6">
+                            <InputText id="VendorAddress" @bind-Value="@purchaseEntry.VendorAddress" class="form-control read-only-textbox" />
+                            <ValidationMessage For="@(() => purchaseEntry.VendorAddress)" />
+                        </div>
+                    </div>
+                     <div class="form-group row" style="margin-bottom:5px">
+                        <label for="VendorPhoneNumber" class="col-md-4 col-form-label align-self-center">@Localizer["VendorPhoneNumber"]:</label>
+                        <div class="col-md-6">
+                            <InputText id="VendorPhoneNumber" @bind-Value="@purchaseEntry.VendorPhoneNumber" class="form-control read-only-textbox" />
+                            <ValidationMessage For="@(() => purchaseEntry.VendorPhoneNumber)" />
+                        </div>
+                    </div>
+                     <div class="form-group row" style="margin-bottom:5px">
+                        <label for="VendorEmail" class="col-md-4 col-form-label align-self-center">@Localizer["VendorEmail"]:</label>
+                        <div class="col-md-6">
+                            <InputText id="VendorEmail" @bind-Value="@purchaseEntry.VendorEmail" class="form-control read-only-textbox" />
+                            <ValidationMessage For="@(() => purchaseEntry.VendorEmail)" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6" >
+                   
+                     <div class="form-group row" style="margin-bottom:5px">
+                        <label for="PurchaseOrderNumber" class="col-md-4 col-form-label align-self-center">@Localizer["PurchaseOrderNumber"]:</label>
+                        <div class="col-md-6">
+                            <InputText id="PurchaseOrderNumber" @bind-Value="@purchaseEntry.PurchaseOrderNumber" class="form-control read-only-textbox" />
+                            <ValidationMessage For="@(() => purchaseEntry.PurchaseOrderNumber)" />
+                        </div>
+                    </div>
+                     <div class="form-group row" style="margin-bottom:5px">
+                        <label for="PaymentTerms" class="col-md-4 col-form-label align-self-center">@Localizer["PaymentTerms"]:</label>
+                        <div class="col-md-6">
+                            <InputText id="PaymentTerms" @bind-Value="@purchaseEntry.PaymentTerms" class="form-control" />
+                            <ValidationMessage For="@(() => purchaseEntry.PaymentTerms)" />
+                        </div>
+                    </div>
+                    <div class="form-group row" style="margin-bottom:5px">
+                        <label for="PaymentMethod" class="col-md-4 col-form-label align-self-center">@Localizer["PaymentMethod"]:</label>
+                         <div class="col-md-6">
+                      
+                         <select id="PaymentMethod" @bind="@purchaseEntry.PaymentMethod" class="form-select shadow-none">
+                                <option value="">@Localizer["SelectPayment"]</option>
+                            @if (Setting is not null)
+                            {
+                                foreach (var setting in Setting)
+                                {
+                                    <option value="@setting.Name">@setting.Name</option>
+                                }
+                            }
+                        </select>
+                        <ValidationMessage For="@(() => purchaseEntry.PaymentMethod)" />
+                        </div>
+                            
+                    </div>
+                    <div class="form-group row" style="margin-bottom:5px">
+                        <label for="ExpenseCategory"  class="col-md-4 col-form-label align-self-center">
+                            @Localizer["ExpenseCategory"]
+                        </label>
+                          <div class="col-md-6">
+                        <select id="ExpenseCategory" @bind="@purchaseEntry.ExpenseCategory" class="form-select shadow-none">
+                            <option value="">Select Category</option>
+                            @if (chartOfAccounts is not null)
+                            {
+                                foreach (var account in chartOfAccounts)
+                                {
+                                    <option value="@account.AccountName">@account.AccountName</option>
+                                }
+                            }
+                        </select>
+                        <ValidationMessage For="@(() => purchaseEntry.ExpenseCategory)" />
+                            </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            <hr />
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label>Items:</label>
+                        <div class="row">
+                            <div class="col-md-6" style="margin-bottom:5px">
+                                <label for="ItemDescription">@Localizer["ItemParticulars"]":</label>
+                                <InputText id="ItemDescription" @bind-Value="@newItemDescription" class="form-control" />
+                                <ValidationMessage For="@(() => newItemDescription)" />
+                            </div>
+                            <div class="col-md-2" style="margin-bottom:5px">
+                                <label for="Quantity">@Localizer["Quantity"]:</label>
+                                <InputNumber id="Quantity" @bind-Value="@newQuantity" class="form-control" />
+                            </div>
+                            <div class="col-md-2" style="margin-bottom:5px">
+                                <label for="UnitPrice">@Localizer["Unit Price"]:</label>
+                                <InputNumber id="UnitPrice" @bind-Value="@newUnitPrice" class="form-control" />
+                            </div>
+                            <div class="col-md-2 ">
+                                <label ></label>
+                               
+                                 <form @onsubmit="@AddItem" autocomplete="off">
+                                    <button type="submit" class="btn btn-primary">@Localizer["Add Item"]</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                       
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 400px;">@Localizer["ItemParticulars"]</th>
+                                    <th>@Localizer["Quantity"]</th>
+                                    <th>@Localizer["Unit Price"]</th>
+                                    <th>@Localizer["Amount"]</th>
+                                     <th>@Localizer["Action"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (purchaseEntry.PurchaseItems != null)
+                                {
+                                    decimal subTotal = 0;
+                                    decimal taxableAmount = 0;
+                                    decimal taxableAmountWithVat = 0;
+                                    decimal totalAmount = 0;
+                                    decimal otherCharge = 0;
+
+
+                                    @foreach (var item in purchaseEntry.PurchaseItems)
+                                    {
+                                        <tr>
+                                            <td><InputText @bind-Value="item.ItemDescription" class="form-control col-md-6" /></td>
+                                            <td><InputNumber @bind-Value="item.Quantity" class="form-control" style="width: 100px;"/></td>
+                                            <td><InputNumber @bind-Value="item.UnitPrice" class="form-control" style="width: 100px;"/></td>
+                                            <td>@( (item.Quantity * item.UnitPrice).ToString("C", CultureInfo.CurrentCulture) )</td>
+                                            <td> <button type="submit" class="btn btn-danger" @onclick:preventDefault @onclick="() => RemoveItem(item)">Delete</button> </td>
+                                        </tr>
+                                        
+                                         subTotal += item.Quantity * item.UnitPrice;
+                                    }
+                                   purchaseEntry.SubTotal = subTotal;
+
+                                    otherCharge =  (purchaseEntry.ShippingCharges ?? 0.0m) + (purchaseEntry.OtherCharges ?? 0.0m);
+
+                                    taxableAmount = purchaseEntry.SubTotal - (purchaseEntry.DiscountAmount ?? 0);
+
+                                    purchaseEntry.TotalTax = taxableAmount + otherCharge;
+
+                                    taxableAmountWithVat = taxableAmount * 0.13M;
+                                    purchaseEntry.TaxAmount = taxableAmountWithVat;
+
+                                    totalAmount = taxableAmount + taxableAmountWithVat;
+                                    purchaseEntry.TotalAmount = totalAmount;
+
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="row">
+                <div class="col-md-12 d-flex justify-content-center">
+                    <button type="submit" class="btn btn-primary shadow-none" style="width: 150px;" @onclick="ClearAll">
+                        @Localizer["ClearAll"]
+                    </button>
+                </div>
+            </div>
+            <br />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group" style="margin-bottom:5px">
+                        <label for="Remarks">Note: </label>
+                        <InputTextArea id="Remarks" @bind-Value="@purchaseEntry.Remarks" class="form-control" />
+                        <ValidationMessage For="@(() => purchaseEntry.Remarks)" />
+                    </div>
+                     <div class="form-group" style="margin-bottom:5px">
+                        <label for="Remarks">@Localizer["AmountInWords"]:</label>
+                      
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group row">
+
+                        <label style="margin-bottom:5px">@Localizer["Summary"]:</label>
+                        
+                       <div class="form-group row" style="margin-bottom:5px">
+                            <label for="SubTotal" class="col-md-5 col-form-label align-self-center">@Localizer["SubTotal"]:</label>
+                       
+                            @{
+                                string subTotalDisplay = purchaseEntry.SubTotal != null ? purchaseEntry.SubTotal.ToString("C") : "";
+                            }
+                            <div class="col-md-5">
+                            <InputText id="SubTotal" @bind-Value="subTotalDisplay" class="form-control read-only-textbox" readonly />
+                            </div>
+                        </div>
+
+                         
+                          <div class="form-group row" style="margin-bottom:5px">
+                            <label for="ShippingCharges" class="col-md-5 col-form-label align-self-center ">@Localizer["Shipping Charges"]:</label>
+                             <div class="col-md-5">
+                       
+                                <InputNumber id="ShippingCharges" @bind-Value="purchaseEntry.ShippingCharges" class="form-control"  />
+                            </div>
+                            
+                         </div>
+                          <div class="form-group row" style="margin-bottom:5px">
+                            <label for="OtherCharges" class="col-md-5 col-form-label align-self-center ">@Localizer["OtherCharges"]:</label>
+                             <div class="col-md-5">
+                       
+                                <InputNumber id="OtherCharges" @bind-Value="purchaseEntry.OtherCharges" class="form-control"  />
+                            </div>
+                            
+                         </div>
+                           <div class="form-group row" style="margin-bottom:5px">
+                        <label for="DiscountAmount" class="col-md-5 col-form-label align-self-center">@Localizer["Discount"]:</label>
+                         <div class="col-md-5">
+                       
+                            <InputNumber id="DiscountAmount" @bind-Value="@purchaseEntry.DiscountAmount" class="form-control"  />
+                        </div>
+                            
+                         </div>
+                          <div class="form-group row" style="margin-bottom:5px">
+                            <label for="TotalTax" class="col-md-5 col-form-label align-self-center">@Localizer["TaxableAmt"]:</label>
+                             <div class="col-md-5">
+                       
+                                 <InputNumber id="TotalTax" @bind-Value="@purchaseEntry.TotalTax" class="form-control read-only-textbox" />
+                            </div>
+                            
+                         </div>
+                           <div class="form-group row" style="margin-bottom:5px">
+                            <label for="TaxAmount" class="col-md-5 col-form-label align-self-center">VAT [@purchaseEntry.TaxRate] %:</label>
+                             <div class="col-md-5">
+                       
+                                 <InputNumber  id="TaxAmount" @bind-Value="@purchaseEntry.TaxAmount" class="form-control read-only-textbox" readonly />
+                            </div>
+                            
+                         </div>
+                           <div class="form-group row" style="margin-bottom:50px">
+                            <label for="TotalAmount" class="col-md-5 col-form-label align-self-center ">@Localizer["Total"]:</label>
+                             <div class="col-md-5">
+                       
+                                <InputNumber id="TotalAmount" @bind-Value="purchaseEntry.TotalAmount" class="form-control read-only-textbox" readonly />
+                            </div>
+                            
+                         </div>
+
+                       
+                        
+       
+                        
+                    </div>
+                </div>
+
+               
+
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 d-flex justify-content-center">
+                    <button type="submit" class="btn btn-primary shadow-none mb-3" >
+                        @Localizer["SaveAndPrint"]
+                    </button>
+                     <div style="width: 1cm"></div>
+                    <a href="expressentries" class="btn btn-secondary shadow-none mb-3">@Localizer["BackToList"]</a>
+                </div>
+            </div>
+
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+        </EditForm>
+    </div>
+}
+
+
+
+@code {
+    private DateTime currentDate = DateTime.Today;
+    private string currentDateAsString = DateTime.Today.ToString("yyyy-MM-dd");
+    private string currentNepaliDateAsString;
+    private ConfirmDialog dialog = default!;
+    [Inject] protected ToastService ToastService { get; set; }
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int PurchaseEntryId { get; set; }
+
+    [Parameter]
+    public EventCallback<PurchaseEntry> OnValidPurchaseEntrySubmit { get; set; }
+
+    public PurchaseEntry? purchaseEntry { get; set; }
+    public PurchaseItem? purchaseItem { get; set; }
+    private List<Customer> Customers = new List<Customer>();
+    public List<ChartOfAccount> chartOfAccounts = new List<ChartOfAccount>();
+    private List<Party> Parties = new List<Party>();
+    private List<Setting> Setting = new List<Setting>();
+    private NepaliDate currentDateNepali { get; set; }
+
+
+    private string? newItemDescription;
+    private int newQuantity;
+    private decimal newUnitPrice;
+
+    string yearRange = $"{DateTime.Today.AddYears(-1).Year} - {DateTime.Today.Year}";
+
+    private void HandleVendorNameSelection(ChangeEventArgs e)
+    {
+        var selectedVendorName = e.Value?.ToString();
+        purchaseEntry.VendorName = e.Value?.ToString();
+
+        if (!string.IsNullOrEmpty(selectedVendorName))
+        {
+            var selectedVendor = Parties.FirstOrDefault(p => p.Name == selectedVendorName);
+            if (selectedVendor != null)
+            {
+                purchaseEntry.VendorID = selectedVendor.PartyID;
+                purchaseEntry.PANNumber = selectedVendor.Pan;
+                purchaseEntry.VendorPhoneNumber = selectedVendor.Phone;
+                purchaseEntry.VendorAddress = selectedVendor.Address;
+                purchaseEntry.VendorContactPerson = selectedVendor.ContactName;
+                purchaseEntry.VendorEmail = selectedVendor.Email;
+            }
+        }
+        else
+        {
+            purchaseEntry.VendorID = null;
+            purchaseEntry.PANNumber = null; 
+            purchaseEntry.VendorPhoneNumber = null;
+            purchaseEntry.VendorAddress = null;
+            purchaseEntry.VendorContactPerson = null;
+            purchaseEntry.VendorEmail = null;
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+            purchaseEntry = await PurchaseEntryRepo.GetByIdAsync(PurchaseEntryId);
+
+        }
+        else
+        {
+            purchaseEntry = new PurchaseEntry();
+            purchaseEntry.PurchaseOrderNumber = GeneratePurchaseOrderNumber();
+        }
+
+        await LoadCustomer();
+        await LoadCategory();
+        await LoadParties();
+        await LoadSettingTax();
+        await LoadSettingPaymentMethod();
+        currentDateNepali = new NepaliDate(DateTime.Now);
+        currentNepaliDateAsString = $"{currentDateNepali.Year}/{currentDateNepali.Month}/{currentDateNepali.Day}";
+        CultureInfo cultureInfo = CultureInfo.CurrentCulture;
+        string lang = cultureInfo.ThreeLetterISOLanguageName;
+        if (lang == "nep")
+        {
+                yearRange = $"{currentDateNepali.AddMonths(-12).Year} - {currentDateNepali.Year}";
+
+        }
+      
+
+
+
+    }
+
+    private async Task LoadCustomer()
+    {
+        var customer = await CustomerRepo.GetAllAsync();
+        Customers = customer.ToList();
+    }
+
+    private async Task LoadParties()
+    {
+        var parties = await PartyRepo.GetPartiesAsync();
+        Parties = parties.ToList();
+    }
+
+    private async Task AddOrEditExpenseEntry()
+    {
+      
+
+       
+        if (purchaseEntry.PurchaseItems == null || purchaseEntry.PurchaseItems.Count == 0)
+        {
+            if (string.IsNullOrWhiteSpace(newItemDescription))
+            {
+
+                ToastService.Notify(new(ToastType.Danger, $"Empty Item List", "There should be at least one item in the list in order to proceed. Please add items to the list to proceed.."));
+                await Task.Delay(2000);
+                return;
+            }
+        }
+        
+        await OnValidPurchaseEntrySubmit.InvokeAsync(purchaseEntry);
+    }
+  
+
+    private async Task LoadCategory()
+    {
+        var account = await ChartOfAccountRepo.GetCategoryAsync();
+        chartOfAccounts = account.ToList();
+    }
+
+    private async Task LoadSettingTax()
+    {
+        var setting = await SettingRepo.GetTaxFromSettingAsync();
+        purchaseEntry.TaxRate = decimal.Parse(setting.Value);
+    }
+    private async Task LoadSettingPaymentMethod()
+    {
+        var method = await SettingRepo.GetPaymentSettingAsync();
+        Setting = method.ToList();
+    }
+
+    private void AddItem()
+    {
+        
+        if (string.IsNullOrWhiteSpace(newItemDescription) || newQuantity <= 0 || newUnitPrice <= 0)
+        {
+ 
+        return;
+        }
+        if (purchaseEntry.PurchaseItems == null)
+        {
+            purchaseEntry.PurchaseItems = new List<PurchaseItem>();
+        }
+
+        PurchaseItem newItem = new PurchaseItem
+            {
+                ItemDescription = newItemDescription,
+                Quantity = newQuantity,
+                UnitPrice = newUnitPrice
+            };
+        purchaseEntry.PurchaseItems.Add(newItem);
+
+        newItemDescription = "";
+        newQuantity = 0;
+        newUnitPrice = 0;
+    }
+
+    private void ClearAll()
+    {
+        purchaseEntry.PurchaseItems.Clear();
+    }
+
+    
+    private void PrintPurchaseEntry(int purchaseEntryId)
+    {
+        // Implement printing logic here
+
+    }
+
+    private async void RemoveItem(PurchaseItem item)
+    {
+         var confirmation = await dialog.ShowAsync(
+                title: "Are you sure you want to delete this?",
+                message1: "This will delete the record. Once deleted can not be rolled back.",
+                message2: "Do you want to proceed?");
+        if (confirmation)
+        {
+             purchaseEntry.PurchaseItems.Remove(item);
+        }
+
+       
+    }
+    private string GeneratePurchaseOrderNumber()
+    {
+            string prefix = "PO"; 
+            string timestamp = DateTime.Now.ToString("yyMMddHHmmss"); 
+            string randomDigits = GenerateRandomDigits(4); 
+
+            string purchaseOrderNumber = $"{prefix}-{timestamp}-{randomDigits}";
+
+            return purchaseOrderNumber;
+    }
+    private string GenerateRandomDigits(int length)
+    {
+            Random random = new Random();
+            const string chars = "0123456789";
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+}

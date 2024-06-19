@@ -1,0 +1,159 @@
+﻿@page "/dailytransactions/{transactionNpDate}"
+@inject IDailyTransactionRepo DailyTransactionRepo
+
+@attribute [StreamRendering]
+
+<PageTitle>DailyTransaction Data</PageTitle>
+
+
+@if (dailytransactions == null)
+{
+    <p><em> Loading </em></p>
+}
+else if (dailytransactions.Any())
+{
+    <Card>
+        <CardHeader>Income Expenditure</CardHeader>
+        <CardBody>
+            @{
+                var groupedTransactions = dailytransactions.GroupBy(t => t.NpTransactionDate);
+            }
+
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Transactions</h6>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th colspan="5">Income</th>
+                                <th> </th>
+                                <th colspan="4">Expenditure</th>
+                            </tr>
+                            <tr>
+                                <th>@Localizer["Date"]</th>
+                                <th>@Localizer["Particular"]</th>
+                                <th>@Localizer["Bank"]</th>
+                                <th>@Localizer["PaymentType"]</th>
+                                <th class="text-end">@Localizer["Amount"]</th>
+                                <th>Balance</th>
+                                <th>@Localizer["Particular"]</th>
+                                <th>@Localizer["Bank"]</th>
+                                <th>@Localizer["PaymentType"]</th>
+                                <th class="text-end">@Localizer["Amount"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var group in groupedTransactions)
+                            {
+                                var inTransactions = group.Where(t => t.InOut == TransactionType.In).ToList();
+                                var outTransactions = group.Where(t => t.InOut == TransactionType.Out).ToList();
+                                var maxRows = Math.Max(inTransactions.Count, outTransactions.Count);
+                                var inTransactionsAmount = group.Where(t => t.InOut == TransactionType.In).Sum(t => t.Amount);
+                                var outTransactionsAmount = group.Where(t => t.InOut == TransactionType.Out).Sum(t => t.Amount);
+                                var balance = inTransactionsAmount - outTransactionsAmount;
+
+                                @for (var i = 0; i < maxRows; i++)
+                                {
+                                    <tr>
+                                        <td>@(i == 0 ? group.Key : null)</td>
+                                        @if (i < inTransactions.Count)
+                                        {
+                                            <td>@inTransactions[i].Particular</td>
+                                            <td>@inTransactions[i].BankName</td>
+                                            <td>@inTransactions[i].PaymentMode</td>
+                                            <td class="text-end">@inTransactions[i].Amount</td>
+                                        }
+                                        else
+                                        {
+                                            <td colspan="4"></td>
+                                        }
+                                        <td>@(i == 0 ? balance : null)</td>
+
+                                        @if (i < outTransactions.Count)
+                                        {
+                                            <td>@outTransactions[i].Particular</td>
+                                            <td>@outTransactions[i].BankName</td>
+                                            <td>@outTransactions[i].PaymentMode</td>
+                                            <td class="text-end">@outTransactions[i].Amount</td>
+                                        }
+                                        else
+                                        {
+                                            <td colspan="4"></td>
+                                        }
+                                    </tr>
+                                }
+                                <tr>
+                                    <th colspan="2" class="text-center"><strong>@group.Key</strong></th>
+                                    <th colspan="3" class="text-end">@inTransactionsAmount</th>
+                                    <th class="text-end">@balance</th>
+                                    <th colspan="4" class="text-end">@outTransactionsAmount</th>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="2">Total Income</th>
+                                <th colspan="3" class="text-end">@dailytransactions.Where(t => t.InOut == TransactionType.In).Sum(t => t.Amount)</th>
+                                <th>
+                                    @(dailytransactions.Where(t => t.InOut == TransactionType.In).Sum(t => t.Amount) - dailytransactions.Where(t => t.InOut == TransactionType.Out).Sum(t => t.Amount))
+                                </th>
+                                <th colspan="2">Total Expenditure</th>
+                                <th colspan="2" class="text-end">@dailytransactions.Where(t => t.InOut == TransactionType.Out).Sum(t => t.Amount)</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </CardBody>
+    </Card>
+}
+else
+{
+    <p>No daily transactions found</p>
+}
+
+@code {
+    private List<DailyTransactionVM>? dailytransactions = null;
+    private DailyTransactionVM dailytransaction;
+    [Parameter]
+    public string? transactionNpDate { get; set; }
+
+
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch data from repository
+        try
+        {
+            PreloadService.Show();
+            if (transactionNpDate != null)
+            {
+                var transactions = await DailyTransactionRepo.GetDailyTransactionByDateAsync(transactionNpDate);
+                dailytransactions = transactions.ToList();
+            }
+
+        }
+        catch (Exception ex)
+        {
+            // Handle exception gracefully
+            Console.WriteLine($"Error fetching dailytransactions: {ex.Message}");
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+
+    }
+
+
+
+
+
+
+
+}
+
+

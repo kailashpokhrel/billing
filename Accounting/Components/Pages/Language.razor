@@ -1,0 +1,55 @@
+﻿@rendermode InteractiveServer
+
+
+
+@inject NavigationManager NavigationManager
+@using Accounting.Controllers
+
+@using System.Globalization
+
+<span class="text-muted" style="margin-left:10px; margin-right:2px">Change Language</span>
+<select @bind="Culture">
+
+
+    <option value="en-US">English (United States)</option>
+    <option value="ne-NP">Nepali (Nepal)</option>
+
+
+
+
+</select>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@code {
+    private CultureInfo Culture
+    {
+        get { return CultureInfo.CurrentCulture; }
+        set
+        {
+            if (CultureInfo.CurrentCulture != value)
+            {
+                var uri = new Uri(NavigationManager.Uri).GetComponents(UriComponents.PathAndQuery, UriFormat.Unescaped);
+                var cultureEscaped = Uri.EscapeDataString(value.Name);
+                var uriEscaped = Uri.EscapeDataString(uri);//uri.Replace($"culture={Uri.EscapeDataString(Culture.Name)}", $"culture={cultureEscaped}");
+                NavigationManager.NavigateTo($"Culture/Set?culture={cultureEscaped}&redirectUri={uriEscaped}", forceLoad: true);
+            }
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Culture = CultureInfo.CurrentCulture;
+    }
+}

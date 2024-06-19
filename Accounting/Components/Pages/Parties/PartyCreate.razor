@@ -1,0 +1,42 @@
+﻿@page "/party/create"
+@inject IPartyRepo PartyRepo
+@inject NavigationManager NavigationManager
+
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["CreateParty"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["CreateParty"]
+    </CardHeader>
+    <CardBody>
+        <PartyForm IsEditMode="false" OnValidPartySubmit="AddParty" />
+    </CardBody>
+</Card>
+@code {
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+
+    private async Task AddParty(Party party)
+    {
+        try
+        {
+            PreloadService.Show();
+
+            await PartyRepo.AddPartyAsync(party);
+            ToastService.Notify(new ToastMessage(ToastType.Success, $"Party saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/parties");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new ToastMessage(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

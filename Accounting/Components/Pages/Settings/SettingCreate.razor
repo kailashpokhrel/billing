@@ -1,0 +1,39 @@
+﻿@page "/setting/create"
+@inject ISettingRepo SettingRepo
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create Setting</PageTitle>
+<Card>
+    <CardHeader>
+        Create Setting
+    </CardHeader>
+    <CardBody>
+        <SettingForm OnValidSettingSubmit="AddSetting" />
+    </CardBody>
+</Card>
+
+@code {
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    private async Task AddSetting(Setting setting)
+    {
+        try
+        {
+            PreloadService.Show();
+
+            await SettingRepo.AddSettingAsync(setting);
+            ToastService.Notify(new ToastMessage(ToastType.Success, "Setting saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/settings");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new ToastMessage(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

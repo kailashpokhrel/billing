@@ -1,0 +1,161 @@
+﻿@inject IExpenseEntryRepo ExpenseEntryRepo
+@inject ICustomerRepo CustomerRepo
+@inject IChartOfAccountRepo ChartOfAccountRepo
+@inject IStringLocalizer<Accounting.Locales.AppResource> Localizer
+
+@if (ExpenseEntry is not null)
+{
+    <div class="container">
+        <EditForm Enhance="true" method="post" FormName="AddOrEditExpenseEntryForm" OnValidSubmit="AddOrEditExpenseEntry" Model="ExpenseEntry" autocomplete="off">
+
+            @if (IsEditMode)
+            {
+                <input type="hidden" name="ExpenseEntry.ExpenseID" value="@ExpenseEntry.ExpenseID" />
+            }
+
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <label for="CustomerID" class="form-label">
+                        @Localizer["CustomerID"]
+                    </label>
+                    <select id="CustomerID" @bind="@ExpenseEntry.CustomerID" class="form-select shadow-none">
+                        <option value="">Select Customer</option>
+                        @{
+                            if (Customers is not null)
+                            {
+                                foreach (var customer in Customers)
+                                {
+                                    <option value="@customer.CustomerId">@customer.Name</option>
+                                }
+                            }
+                        }
+                    </select>
+                    <ValidationMessage For="@(() => ExpenseEntry.CustomerID)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="ExpenseDate" class="form-label">
+                        @Localizer["ExpenseDate"]
+                    </label>
+                    <InputDate @bind-Value="ExpenseEntry.ExpenseDate" class="form-control shadow-none" required></InputDate>
+                    <ValidationMessage For="@(() => ExpenseEntry.ExpenseDate)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="ExpenseCategory" class="form-label">
+                        @Localizer["ExpenseCategory"]
+                    </label>
+                  
+                    <select id="ExpenseCategory" @bind="@ExpenseEntry.ExpenseCategory" class="form-select shadow-none">
+                        <option value="">Select Category</option>
+                        @{
+                            if (chartOfAccounts is not null)
+                            {
+                                foreach (var account in chartOfAccounts)
+                                {
+                                    <option value="@account.AccountName">@account.AccountName</option>
+                                }
+                            }
+                        }
+                    </select>
+                    <ValidationMessage For="@(() => ExpenseEntry.ExpenseCategory)" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <label for="ExpenseDescription" class="form-label">
+                        @Localizer["ExpenseDescription"]
+                    </label>
+                    <InputText @bind-Value="ExpenseEntry.ExpenseDescription" class="form-control shadow-none"></InputText>
+                    <ValidationMessage For="@(() => ExpenseEntry.ExpenseDescription)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="Amount" class="form-label">
+                        @Localizer["Amount"]
+                    </label>
+                    <InputNumber @bind-Value="ExpenseEntry.Amount" class="form-control shadow-none" required></InputNumber>
+                    <ValidationMessage For="@(() => ExpenseEntry.Amount)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="PaymentMethod" class="form-label">
+                        @Localizer["PaymentMethod"]
+                    </label>
+                    <select id="PaymentMethod" @bind="@ExpenseEntry.PaymentMethod" class="form-select shadow-none">
+                        <option value="Cash">Cash</option>
+                        <option value="Credit Card">Credit Card</option>
+                        <option value="Bank Account">Bank Account</option>
+
+                    </select>
+                    <ValidationMessage For="@(() => ExpenseEntry.PaymentMethod)" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <button class="btn btn-primary shadow-none mb-3">
+                        Submit
+                    </button>
+                    <a href="expressentries" class="btn btn-secondary shadow-none mb-3"> Back to List</a>
+                </div>
+
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+            </div>
+
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int ExpenseEntryId { get; set; }
+
+    [Parameter]
+    public EventCallback<ExpenseEntry> OnValidExpenseEntrySubmit { get; set; }
+
+    [SupplyParameterFromForm]
+    public ExpenseEntry? ExpenseEntry { get; set; }
+    public List<Customer> Customers = new List<Customer>();
+    public List<ChartOfAccount> chartOfAccounts = new List<ChartOfAccount>();
+
+
+    private string Title => IsEditMode ? $"Edit ExpenseEntry {ExpenseEntry?.ExpenseID}" : "Add New ExpenseEntry";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        if (IsEditMode)
+        {
+            ExpenseEntry = await ExpenseEntryRepo.GetExpenseAsync(ExpenseEntryId);
+        }
+        else
+        {
+            ExpenseEntry ??= new ExpenseEntry();
+        }
+        await LoadCustomer();
+        await LoadCategory();
+
+      
+    }
+    private async Task LoadCustomer()
+    {
+        var customer = await CustomerRepo.GetAllAsync();
+        Customers = customer.ToList();
+    }
+    private async Task LoadCategory()
+    {
+        var account = await ChartOfAccountRepo.GetCategoryAsync();
+        chartOfAccounts = account.ToList();
+    }
+
+    private async Task AddOrEditExpenseEntry()
+    {
+        await OnValidExpenseEntrySubmit.InvokeAsync(ExpenseEntry);
+    }
+}

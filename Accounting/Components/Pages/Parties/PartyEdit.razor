@@ -1,0 +1,44 @@
+﻿@page "/party/edit/{PartyID:int}"
+@inject IPartyRepo PartyRepo
+@inject NavigationManager NavigationManager
+
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["EditParty"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["EditParty"]
+    </CardHeader>
+    <CardBody>
+        <PartyForm IsEditMode="true" PartyID="@PartyID" OnValidPartySubmit="EditParty" />
+    </CardBody>
+</Card>
+@code {
+    [Parameter] public int PartyID { get; set; }
+
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+
+    private async Task EditParty(Party party)
+    {
+        try
+        {
+            PreloadService.Show();
+
+            await PartyRepo.UpdatePartyAsync(party);
+            ToastService.Notify(new ToastMessage(ToastType.Success, $"Party updated successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/parties");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new ToastMessage(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

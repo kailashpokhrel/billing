@@ -1,0 +1,139 @@
+﻿@page "/bankaccounts"
+@inject IBankAccountRepo BankAccountRepo
+@inject NavigationManager NavigationManager
+@attribute [StreamRendering]
+
+<PageTitle>@Localizer["BankAccountList"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["BankAccountList"] <a href="/bankaccount/create" class="btn btn-primary shadow-none  float-end">
+            @Localizer["AddNew"]
+        </a>
+    </CardHeader>
+    <CardBody>
+
+
+
+
+        <ConfirmDialog @ref="dialog" />
+        @if (bankaccounts == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else if (bankaccounts.Any())
+        {
+            <Grid TItem="BankAccount" class="table table-hover table-bordered table-striped" DataProvider="BankAccountsDataProvider" AllowFiltering="false" AllowPaging="true" Responsive="true" AllowSorting="true">
+                <GridColumn TItem="BankAccount" HeaderText="Id" PropertyName="Id">
+                    @context.Id
+                </GridColumn>
+                <GridColumn TItem="BankAccount" HeaderText="@Localizer["Name"]" PropertyName="BankName">
+                    @context.BankName
+                </GridColumn>
+                
+                <GridColumn TItem="BankAccount" HeaderText="@Localizer["Status"]" PropertyName="Status">
+                    @context.Status
+                </GridColumn>
+                <GridColumn TItem="BankAccount" HeaderText="@Localizer["Action"]" Context="bankaccountContext">
+                    <div class="btn-group">
+                        <Button onclick="@(() => OpenEditForm(bankaccountContext.Id))" Size="Size.Small" Color="ButtonColor.Primary" >Edit</Button> 
+
+                    <EditForm EditContext="editContext" OnValidSubmit="@(() => DeleteBankAccount(bankaccountContext.Id))">
+                        @if (bankaccountContext != null)
+                        {
+                                <Button Color="ButtonColor.Danger" Size="Size.Small" Type="ButtonType.Submit">Delete</Button>
+                        }
+                    </EditForm>
+                    </div>
+                </GridColumn>
+            </Grid>
+        }
+        else
+        {
+            <p>No bankaccounts found</p>
+        }
+
+    </CardBody>
+</Card>
+@code {
+    private List<BankAccount>? bankaccounts = null;
+    private BankAccount bankaccount;
+    private EditContext? editContext;
+
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    private ConfirmDialog dialog = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch data from repository
+        try
+        {
+            PreloadService.Show();
+            bankaccounts ??= (await BankAccountRepo.GetBankAccountsAsync()).ToList();
+            bankaccount ??= new BankAccount();
+            editContext = new EditContext(bankaccount);
+        }
+        catch (Exception ex)
+        {
+            // Handle exception gracefully
+            Console.WriteLine($"Error fetching bankaccounts: {ex.Message}");
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+        
+    }
+
+    private async Task<GridDataProviderResult<BankAccount>> BankAccountsDataProvider(GridDataProviderRequest<BankAccount> request)
+    {
+        return await Task.FromResult(request.ApplyTo(bankaccounts));
+    }
+
+    private async void DeleteBankAccount(int bankaccountId)
+    {
+        try
+        {
+            var confirmation = await dialog.ShowAsync(
+                title: "Are you sure you want to delete this?",
+                message1: "This will delete the record. Once deleted can not be rolled back.",
+                message2: "Do you want to proceed?");
+
+            if (confirmation)
+            {
+                if (bankaccountId > 0)
+                {
+                    PreloadService.Show();
+                    await BankAccountRepo.DeleteBankAccountAsync(bankaccountId);
+                    ToastService.Notify(new(ToastType.Success, $"BankAccount deleted successfully."));
+
+                    bankaccounts ??= (await BankAccountRepo.GetBankAccountsAsync()).ToList();
+
+                    await Task.Delay(2000);
+                    NavigationManager.NavigateTo("/bankaccounts");
+                }
+            }
+            else
+            {
+                // do something
+            }
+        }
+        catch (Exception ex)
+        {
+            // handle exception
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private void OpenEditForm(int bankaccountId)
+    {
+        NavigationManager.NavigateTo($"/bankaccount/edit/{bankaccountId}");
+    } 
+   
+}
+
+

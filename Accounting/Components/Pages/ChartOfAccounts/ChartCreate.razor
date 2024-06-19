@@ -1,0 +1,42 @@
+﻿@page "/chartofaccount/create"
+@inject IChartOfAccountRepo ChartOfAccountRepo
+@inject NavigationManager NavigationManager
+
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["CreateChartOfAccount"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["CreateChartOfAccount"]
+    </CardHeader>
+    <CardBody>
+        <ChartForm IsEditMode="false" OnValidChartAccountSubmit="AddChartOfAccount" />
+    </CardBody>
+</Card>
+@code {
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+
+    private async Task AddChartOfAccount(ChartOfAccount chartaccount)
+    {
+        try
+        {
+            PreloadService.Show();
+
+            await ChartOfAccountRepo.CreateChartOfAccountAsync(chartaccount);
+            ToastService.Notify(new(ToastType.Success, $"Chart Of Account saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/chartofaccount");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

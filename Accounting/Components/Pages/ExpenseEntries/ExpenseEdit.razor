@@ -1,0 +1,42 @@
+﻿@page "/expense/edit/{id:int}"
+@inject IExpenseEntryRepo ExpenseEntryRepo
+@inject NavigationManager NavigationManager
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["EditExpenseEntry"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["EditExpenseEntry"]
+    </CardHeader>
+    <CardBody>
+        <ExpenseForm IsEditMode="true" ExpenseEntryId="@Id" OnValidExpenseEntrySubmit="EditExpenseEntry" />
+    </CardBody>
+</Card>
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    private async Task EditExpenseEntry(ExpenseEntry expense)
+    {
+        try
+        {
+            PreloadService.Show();
+
+            await ExpenseEntryRepo.UpdateExpenseAsync(expense);
+            ToastService.Notify(new (ToastType.Success, $"Expense entry saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/expressentries");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new (ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

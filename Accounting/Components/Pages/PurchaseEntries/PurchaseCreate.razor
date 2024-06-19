@@ -1,0 +1,58 @@
+﻿@page "/purchase/create"
+@inject IPurchaseEntryRepo PurchaseEntryRepo
+@inject ICustomerRepo CustomerRepo
+@inject IPurchaseItemRepo PurchaseItemRepo
+@inject NavigationManager NavigationManager
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["CreatePurchaseEntry"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["CreatePurchaseEntry"]
+    </CardHeader>
+    <CardBody>
+        <PurchaseEntryForm IsEditMode="false" OnValidPurchaseEntrySubmit="AddPurchaseEntry" />
+    </CardBody>
+</Card>
+@code {
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    private async Task AddPurchaseEntry(PurchaseEntry purchase)
+    {
+
+        if (purchase == null || purchase.PurchaseItems == null || purchase.PurchaseItems.Count == 0)
+        {
+            return;
+        }
+        try
+        {
+            PreloadService.Show();
+
+
+            // Save PurchaseEntry
+            purchase.BillDate = DateTime.Today;
+            purchase.DueDate = DateTime.Today;
+            purchase.PaymentDate = DateTime.Today;
+            purchase.PaymentStatus = "UnPaid";
+            purchase.CreatedDate = DateTime.Today;
+            purchase.CreatedBy = "Admin";
+            purchase.ProjectDepartment = "Sales";
+
+            int billingId = await PurchaseEntryRepo.CreateAsync(purchase);
+            
+            ToastService.Notify(new (ToastType.Success, $"Purchase entry saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/printreceipt");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new (ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

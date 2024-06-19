@@ -1,0 +1,40 @@
+﻿@page "/expense/create"
+@inject IExpenseEntryRepo ExpenseEntryRepo
+@inject NavigationManager NavigationManager
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["CreateExpenseEntry"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["CreateExpenseEntry"]
+    </CardHeader>
+    <CardBody>
+        <ExpenseForm IsEditMode="false" OnValidExpenseEntrySubmit="AddExpenseEntry" />
+    </CardBody>
+</Card>
+@code {
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    private async Task AddExpenseEntry(ExpenseEntry expense)
+    {
+        try
+        {
+            PreloadService.Show();
+
+            await ExpenseEntryRepo.CreateExpenseAsync(expense);
+            ToastService.Notify(new (ToastType.Success, $"Expense entry saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/expressentries");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new (ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

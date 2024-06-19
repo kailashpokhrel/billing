@@ -1,0 +1,46 @@
+﻿@page "/dailytransaction/create"
+
+@inject IDailyTransactionRepo DailyTransactionRepo
+@inject NavigationManager NavigationManager
+
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["CreateDailyTransaction"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["CreateDailyTransaction"]
+    </CardHeader>
+    <CardBody>
+        <DailyTransactionForm IsEditMode="false" OnValidDailyTransactionSubmit="AddDailyTransaction" />
+    </CardBody>
+    
+</Card>
+@code {
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    
+
+
+    private async Task AddDailyTransaction(DailyTransaction dailytransaction)
+    {
+        try
+        {
+            PreloadService.Show();
+            await DailyTransactionRepo.InsertDailyTransactionAsync(dailytransaction);
+            ToastService.Notify(new(ToastType.Success, $"DailyTransaction saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo($"/dailytransaction/{dailytransaction.NpTransactionDate}");
+        }
+        catch (Exception ex)
+        {
+            // handle exception
+
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

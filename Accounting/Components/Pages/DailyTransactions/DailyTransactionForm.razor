@@ -1,0 +1,196 @@
+﻿@inject IDailyTransactionRepo DailyTransactionRepo
+@inject IBankAccountRepo BankAccountRepo
+@inject IJSRuntime JS
+@using Microsoft.JSInterop
+
+
+
+
+@if (dailyTransaction is not null)
+{
+    <div class="container">
+        <EditForm Enhance="true" method="post" FormName="AddOrEditDailyTransactionForm" OnValidSubmit="AddOrEditDailyTransaction" Model="dailyTransaction" autocomplete="off">
+            <div class="row">
+                @if (IsEditMode)
+                {
+                    <input type="hidden" name="dailyTransaction.Id" value="@dailyTransaction.Id" />
+
+                }
+
+                <div class="mb-3 col-4">
+                    <label for="Name" class="form-label">
+                        @Localizer["Name"]
+                    </label>
+                    <InputText id="Particular" @bind-Value="dailyTransaction.Particular" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => dailyTransaction.Particular)" />
+                </div>
+
+
+
+                <div class="mb-3 col-4">
+                    <label for="NpTransactionDate" class="form-label">@Localizer["TransactionDateNepali"]:</label>
+                    <InputText @bind-Value="dailyTransaction.NpTransactionDate" class="form-control shadow-none" id="nepaliDate" placeholder="Select Nepali Date" />
+                    <ValidationMessage For="@(() => dailyTransaction.NpTransactionDate)" />
+                    <InputDate @bind-Value="dailyTransaction.TransactionDate" id="englishDate" class="form-control shadow-none d-none " format="yyyy-MM-dd" readonly />
+                </div>
+                <div class="mb-3 col-4">
+                    <label for="inOut" class="form-label">@Localizer["TransactionType"]:</label>
+                    <select id="inOut" @bind="@dailyTransaction.InOut" class="form-select shadow-none">
+                        <option value="In">In</option>
+                        <option value="Out">Out</option>
+                    </select>
+                    <ValidationMessage For="@(() => dailyTransaction.InOut)" />
+                </div>
+
+
+
+            </div>
+            <div class="row">
+
+
+                <div class="mb-3 col-4">
+                    <label for="inOut" class="form-label">@Localizer["PaymentType"]:</label>
+                    <select id="inOut" @bind="@dailyTransaction.PaymentMode" class="form-select shadow-none">
+                        <option value="CA">Cash</option>
+                        <option value="CH">Cheque</option>
+                    </select>
+                    <ValidationMessage For="@(() => dailyTransaction.PaymentMode)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="BankId" class="form-label">@Localizer["Bank"]:</label>
+                    <select id="BankId" @bind="@dailyTransaction.BankId" class="form-select shadow-none">
+                        <option value="">Select</option>
+                        @{
+                            if (BankAccounts is not null)
+                            {
+                                foreach (var bankaccount in BankAccounts)
+                                {
+                                    <option value="@bankaccount.Id">@bankaccount.BankName</option>
+                                }
+                            }
+                        }
+                    </select>
+                    <ValidationMessage For="@(() => dailyTransaction.BankId)" />
+                </div>
+                <div class="mb-3 col-4">
+                    <label for="amount" class="form-label">@Localizer["Amount"]:</label>
+                    <InputNumber @bind-Value="dailyTransaction.Amount" class="form-control shadow-none" />
+                    <ValidationMessage For="@(() => dailyTransaction.Amount)" />
+                </div>
+            </div>
+            <div class="row">
+
+
+
+                <div class="col-4 mt-4">
+                    <button class="btn btn-primary shadow-none">
+                        Submit
+                    </button>
+                    <a href="dailytransaction/list" class="btn btn-secondary shadow-none"> Back to List</a>
+                </div>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+            </div>
+        </EditForm>
+    </div>
+}
+
+
+
+<script>
+function initializeNepaliCalendar(xelementId, yelementId) {
+        var x = document.getElementById(xelementId);
+        var y = document.getElementById(yelementId);
+        var z = NepaliFunctions.GetCurrentBsDate('YYYY-MM-DD');
+
+        if (x) {
+            @*x.value = z;*@
+            x.nepaliDatePicker({
+                onChange: function() {
+                    var bsDate = x.value;
+                    var adDate = NepaliFunctions.BS2AD(x.value);
+                    y.value = adDate;
+
+                    DotNet.invokeMethodAsync('Accounting', 'UpdateTransactionDate', bsDate,adDate).catch(err => console.error(err));
+
+                }
+            });
+        }
+    }
+</script>
+
+@code {
+
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int DailyTransactionId { get; set; }
+
+    [Parameter]
+    public EventCallback<DailyTransaction> OnValidDailyTransactionSubmit { get; set; }
+
+    [SupplyParameterFromForm]
+    public static DailyTransaction? dailyTransaction { get; set; }
+
+    public List<BankAccount> BankAccounts { get; set; }
+
+    private string Title => IsEditMode ? $"Edit Daily Transaction {dailyTransaction?.Id}" : "Add New Daily Transaction";
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initializeNepaliCalendar", "nepaliDate", "englishDate");
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+
+            dailyTransaction = await DailyTransactionRepo.GetDailyTransactionByIdAsync(DailyTransactionId);
+
+
+        }
+        else
+        {
+            dailyTransaction ??= new();
+
+
+        }
+
+        await LoadBankAccounts();
+
+    }
+    private async Task LoadBankAccounts()
+    {
+        var accounts = await BankAccountRepo.GetBankAccountsAsync();
+        BankAccounts = accounts.ToList();
+    }
+    private async Task AddOrEditDailyTransaction()
+    {
+        await OnValidDailyTransactionSubmit.InvokeAsync(dailyTransaction);
+    }
+
+    // Static method to update the transaction date
+    [JSInvokable]
+    public static void UpdateTransactionDate(string bsdate, string addate)
+    {
+        Console.WriteLine(bsdate);
+
+        dailyTransaction.NpTransactionDate = bsdate;
+        dailyTransaction.TransactionDate = DateTime.Parse(addate); ;
+
+
+
+
+
+    }
+
+
+
+
+
+
+}

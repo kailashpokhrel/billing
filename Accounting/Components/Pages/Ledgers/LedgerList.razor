@@ -1,0 +1,121 @@
+﻿@page "/ledgers"
+@inject NavigationManager NavigationManager
+@inject ILedgerRepo LedgerRepo
+
+    <PageTitle>Ledger List</PageTitle>
+    <Card>
+        <CardHeader>
+            Customers List <a href="/customer/create" class="btn btn-primary shadow-none  float-end">
+                Add New
+            </a>
+        </CardHeader>
+        <CardBody>
+
+
+
+
+            <ConfirmDialog @ref="dialog" />
+
+            @if (ledgers == null)
+            {
+                <p>Loading...</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Transaction Date</th>
+                            <th>Nepali Date</th>
+                            <th>Particulars</th>
+                            <th>Debit/Credit</th>
+                            <th>Debit Amount</th>
+                            <th>Credit Amount</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ledger in ledgers)
+                        {
+                            <tr>
+                                <td>@ledger.TransactionID</td>
+                                <td>@ledger.TransactionDate.ToShortDateString()</td>
+                                <td>@ledger.NpTransactionDate</td>
+                                <td>@ledger.Particulars</td>
+                                <td>@ledger.DebitCredit</td>
+                                <td>@ledger.DebitAmount</td>
+                                <td>@ledger.CreditAmount</td>
+                                <td>
+                                    <Button onclick="@(() => OpenEditForm(ledger.TransactionID))" Size="Size.Small" Color="ButtonColor.Primary">Edit</Button>
+
+                                    <EditForm Model="ledger" OnValidSubmit="@(() => DeleteLedger(ledger.TransactionID))">
+
+                                        <Button Color="ButtonColor.Danger" Size="Size.Small" Type="ButtonType.Submit">Delete</Button>
+
+                                    </EditForm>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            </CardBody>
+</Card>
+
+            @code {
+                private IEnumerable<Ledger> ledgers;
+
+                [Inject] protected ToastService ToastService { get; set; }
+                [Inject] protected PreloadService PreloadService { get; set; } = default!;
+                private ConfirmDialog dialog = default!;
+
+                protected override async Task OnInitializedAsync()
+                {
+                    ledgers = await LedgerRepo.GetAllAsync();
+                }
+                private void OpenEditForm(int transactionId)
+                {
+                    NavigationManager.NavigateTo($"/ledger/edit/{transactionId}");
+                }
+
+                private async void DeleteLedger(int transactionId)
+                {
+                    try
+                    {
+                        var confirmation = await dialog.ShowAsync(
+                            title: "Are you sure you want to delete this?",
+                            message1: "This will delete the record. Once deleted can not be rolled back.",
+                            message2: "Do you want to proceed?");
+
+                        if (confirmation)
+                        {
+                            if (transactionId > 0)
+                            {
+                                PreloadService.Show();
+                                await LedgerRepo.DeleteAsync(transactionId);
+                                ToastService.Notify(new(ToastType.Success, $"Ledger deleted successfully."));
+
+                                ledgers ??= (await LedgerRepo.GetAllAsync()).ToList();
+
+                                await Task.Delay(2000);
+                                NavigationManager.NavigateTo($"/ledgers");
+                            }
+                        }
+                        else
+                        {
+                            // do something
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // handle exception
+                        ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+                    }
+                    finally
+                    {
+                        PreloadService.Hide();
+                    }
+                }
+
+            }

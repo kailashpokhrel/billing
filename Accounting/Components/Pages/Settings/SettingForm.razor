@@ -1,0 +1,83 @@
+﻿@inject ISettingRepo SettingRepo
+@inject IStringLocalizer<Accounting.Locales.AppResource> Localizer
+
+@if (Setting is not null)
+{
+    <div class="container">
+        <EditForm Enhance="true" method="post" FormName="AddOrEditSettingForm" OnValidSubmit="AddOrEditSetting" Model="Setting" autocomplete="off">
+
+            @if (IsEditMode)
+            {
+                <input type="hidden" name="Setting.Id" value="@Setting.Id" />
+            }
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <label for="Name" class="form-label">
+                        @Localizer["Name"]
+                    </label>
+                    <InputText @bind-Value="Setting.Name" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => Setting.Name)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="Value" class="form-label">
+                        @Localizer["Value"]
+                    </label>
+                    <InputText @bind-Value="Setting.Value" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => Setting.Value)" />
+                </div>
+                <div class="mb-3 col-4">
+                    <label for="Type" class="form-label">
+                        @Localizer["Type"]
+                    </label>
+                    <InputText @bind-Value="Setting.Type" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => Setting.Type)" />
+                </div>
+              
+            </div>
+
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <button class="btn btn-primary shadow-none mb-3">
+                        Submit
+                    </button>
+                    <a href="party" class="btn btn-secondary shadow-none mb-3"> Back to List</a>
+                </div>
+
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int Id { get; set; }
+
+    [Parameter]
+    public EventCallback<Setting> OnValidSettingSubmit { get; set; }
+
+    [SupplyParameterFromForm]
+    public Setting? Setting { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+            Setting = await SettingRepo.GetSettingByIdAsync(Id);
+        }
+        else
+        {
+            Setting = new Setting();
+        }
+    }
+
+    private async Task AddOrEditSetting()
+    {
+        await OnValidSettingSubmit.InvokeAsync(Setting);
+    }
+}

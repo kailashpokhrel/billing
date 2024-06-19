@@ -1,0 +1,144 @@
+﻿@page "/parties"
+@inject IPartyRepo PartyRepo
+@inject NavigationManager NavigationManager
+@attribute [StreamRendering]
+
+<PageTitle>@Localizer["PartyList"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["PartyList"] <a href="/party/create" class="btn btn-primary shadow-none  float-end">
+            @Localizer["AddNew"]
+        </a>
+    </CardHeader>
+    <CardBody>
+
+        <ConfirmDialog @ref="dialog" />
+        @if (parties == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else if (parties.Any())
+        {
+            <Grid TItem="Party" class="table table-hover table-bordered table-striped" DataProvider="PartiesDataProvider" AllowFiltering="false" AllowPaging="true" Responsive="true" AllowSorting="true">
+                <GridColumn TItem="Party" HeaderText="Party ID" PropertyName="PartyID">
+                    @context.PartyID
+                </GridColumn>
+                <GridColumn TItem="Party" HeaderText="@Localizer["Party Name"]" PropertyName="PartyName">
+                    @context.Name
+                </GridColumn>
+                <GridColumn TItem="Party" HeaderText="@Localizer["Address"]" PropertyName="PartyType">
+                    @context.Address
+                </GridColumn>
+                <GridColumn TItem="Party" HeaderText="@Localizer["Contact Name"]" PropertyName="ContactNumber">
+                    @context.ContactName
+                </GridColumn>
+                <GridColumn TItem="Party" HeaderText="@Localizer["Email"]" PropertyName="Email">
+                    @context.Email
+                </GridColumn>
+                <GridColumn TItem="Party" HeaderText="@Localizer["Phone"]" PropertyName="Email">
+                    @context.Phone
+                </GridColumn>
+                <GridColumn TItem="Party" HeaderText="@Localizer["PAN"]" PropertyName="Email">
+                    @context.Pan
+                </GridColumn>
+                <GridColumn TItem="Party" HeaderText="Vendor / Customer">
+                    @($"{(context.IsVendor ? "Vendor" : "")} {(context.IsCustomer ? "Customer" : "")}")
+                </GridColumn>
+                <GridColumn TItem="Party" HeaderText="@Localizer["Actions"]" Context="partyContext">
+                    <div class="btn-group">
+                        <Button onclick="@(() => OpenEditForm(partyContext.PartyID))" Size="Size.Small" Color="ButtonColor.Primary">Edit</Button>
+
+                        <EditForm EditContext="editContext" OnValidSubmit="@(() => DeleteParty(partyContext.PartyID))">
+                            @if (partyContext != null)
+                            {
+                                <Button Color="ButtonColor.Danger" Size="Size.Small" Type="ButtonType.Submit">Delete</Button>
+                            }
+                        </EditForm>
+                    </div>
+                </GridColumn>
+            </Grid>
+        }
+        else
+        {
+            <p>No parties found</p>
+        }
+
+    </CardBody>
+</Card>
+
+@code {
+    private List<Party>? parties = null;
+    private Party party;
+    private EditContext? editContext;
+
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    private ConfirmDialog dialog = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            PreloadService.Show();
+            parties ??= (await PartyRepo.GetAllPartiesAsync()).ToList();
+            party ??= new Party();
+            editContext = new EditContext(party);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching parties: {ex.Message}");
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private async Task<GridDataProviderResult<Party>> PartiesDataProvider(GridDataProviderRequest<Party> request)
+    {
+        return await Task.FromResult(request.ApplyTo(parties));
+    }
+
+    private async void DeleteParty(int partyId)
+    {
+        try
+        {
+            var confirmation = await dialog.ShowAsync(
+                title: "Are you sure you want to delete this?",
+                message1: "This will delete the record. Once deleted can not be rolled back.",
+                message2: "Do you want to proceed?");
+
+            if (confirmation)
+            {
+                if (partyId > 0)
+                {
+                    PreloadService.Show();
+                    await PartyRepo.DeletePartyAsync(partyId);
+                    ToastService.Notify(new(ToastType.Success, $"Party deleted successfully."));
+
+                    parties ??= (await PartyRepo.GetPartiesAsync()).ToList();
+
+                    await Task.Delay(2000);
+                    NavigationManager.NavigateTo("/parties");
+                }
+            }
+            else
+            {
+                // do something
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private void OpenEditForm(int partyId)
+    {
+        NavigationManager.NavigateTo($"/party/edit/{partyId}");
+    }
+}

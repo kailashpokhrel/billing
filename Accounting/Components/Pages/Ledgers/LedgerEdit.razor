@@ -1,0 +1,48 @@
+﻿@page "/ledger/edit/{id:int}"
+@inject ILedgerRepo LedgerRepo
+@inject NavigationManager NavigationManager
+
+
+@using System.Security.Claims;
+
+<PageTitle>Ledger Edit</PageTitle>
+<Card>
+    <CardHeader>
+        Ledger Edit
+    </CardHeader>
+    <CardBody>
+        <LedgerForm IsEditMode="true" TransactionId="@Id" OnValidLedgerSubmit="EditLedger" />
+    </CardBody>
+</Card>
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    
+    
+    private async Task EditLedger(Ledger ledger)
+    {
+        try
+        {
+            PreloadService.Show();
+            
+            
+            await LedgerRepo.UpdateAsync(ledger);
+            ToastService.Notify(new(ToastType.Success, $"Ledger saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo($"/ledgers");
+
+        }
+        catch (Exception ex)
+        {
+            // handle exception
+
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

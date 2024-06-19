@@ -1,0 +1,142 @@
+﻿@page "/chartofaccounts"
+@inject IChartOfAccountRepo ChartOfAccountRepo
+@inject NavigationManager NavigationManager
+@attribute [StreamRendering]
+
+<PageTitle>@Localizer["ChartAccountList"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["ChartAccountList"] <a href="/chartofaccount/create" class="btn btn-primary shadow-none  float-end">
+            @Localizer["AddNew"]
+        </a>
+    </CardHeader>
+    <CardBody>
+
+
+
+
+        <ConfirmDialog @ref="dialog" />
+        @if (chartofaccounts == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else if (chartofaccounts.Any())
+        {
+            <Grid TItem="ChartOfAccount" class="table table-hover table-bordered table-striped" DataProvider="ChartOfAccountsDataProvider" AllowFiltering="false" AllowPaging="true" Responsive="true" AllowSorting="true">
+                <GridColumn TItem="ChartOfAccount" HeaderText="AccountID" PropertyName="Id">
+                    @context.AccountID
+                </GridColumn>
+                <GridColumn TItem="ChartOfAccount" HeaderText="@Localizer["AccountCode"]" PropertyName="AccountCode">
+                    @context.AccountCode
+                </GridColumn>
+
+                <GridColumn TItem="ChartOfAccount" HeaderText="@Localizer["AccountName"]" PropertyName="AccountName">
+                    @context.AccountName
+                </GridColumn>
+                <GridColumn TItem="ChartOfAccount" HeaderText="@Localizer["Description"]" PropertyName="Description">
+                    @context.Description
+                </GridColumn>
+                <GridColumn TItem="ChartOfAccount" HeaderText="@Localizer["AccountType"]" PropertyName="AccountType">
+                    @context.AccountType
+                </GridColumn>
+                <GridColumn TItem="ChartOfAccount" HeaderText="@Localizer["Action"]" Context="chartaccountContext">
+                    <div class="btn-group">
+                        <Button onclick="@(() => OpenEditForm(chartaccountContext.AccountID))" Size="Size.Small" Color="ButtonColor.Primary">Edit</Button>
+
+                        <EditForm EditContext="editContext" OnValidSubmit="@(() => DeleteChartOfAccount(chartaccountContext.AccountID))">
+                            @if (chartaccountContext != null)
+                            {
+                                <Button Color="ButtonColor.Danger" Size="Size.Small" Type="ButtonType.Submit">Delete</Button>
+                            }
+                        </EditForm>
+                    </div>
+                </GridColumn>
+            </Grid>
+        }
+        else
+        {
+            <p>No chartofaccount found</p>
+        }
+
+    </CardBody>
+</Card>
+@code {
+    private List<ChartOfAccount>? chartofaccounts = null;
+    private ChartOfAccount chartofaccount;
+    private EditContext? editContext;
+
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    private ConfirmDialog dialog = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            PreloadService.Show();
+            chartofaccounts ??= (await ChartOfAccountRepo.GetChartOfAccountsAsync()).ToList();
+            chartofaccount ??= new ChartOfAccount();
+            editContext = new EditContext(chartofaccount);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching chart accounts: {ex.Message}");
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+
+    }
+
+    private async Task<GridDataProviderResult<ChartOfAccount>> ChartOfAccountsDataProvider(GridDataProviderRequest<ChartOfAccount> request)
+    {
+        return await Task.FromResult(request.ApplyTo(chartofaccounts));
+    }
+
+    private async void DeleteChartOfAccount(int chartaccountId)
+    {
+        try
+        {
+            var confirmation = await dialog.ShowAsync(
+                title: "Are you sure you want to delete this?",
+                message1: "This will delete the record. Once deleted can not be rolled back.",
+                message2: "Do you want to proceed?");
+
+            if (confirmation)
+            {
+                if (chartaccountId > 0)
+                {
+                    PreloadService.Show();
+                    await ChartOfAccountRepo.DeleteChartOfAccountAsync(chartaccountId);
+                    ToastService.Notify(new(ToastType.Success, $"ChartOfAccount deleted successfully."));
+
+                    chartofaccounts ??= (await ChartOfAccountRepo.GetChartOfAccountsAsync()).ToList();
+
+                    await Task.Delay(2000);
+                    NavigationManager.NavigateTo("/chartofaccounts");
+                }
+            }
+            else
+            {
+                // do something
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+
+    private void OpenEditForm(int chartaccountId)
+    {
+        NavigationManager.NavigateTo($"/chartofaccount/edit/{chartaccountId}");
+    }
+
+}
+
+

@@ -1,0 +1,196 @@
+﻿@page "/searchtransactions"
+@inject IDailyTransactionRepo DailyTransactionRepo
+@inject IBankAccountRepo BankAccountRepo
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@using Microsoft.JSInterop
+
+<div class="container">
+    <EditForm Model="@dailyTransaction" OnValidSubmit="@SearchDailyTransaction">
+        <div class="row">
+            <div class="mb-3 col-4">
+                <label for="NpTransactionFromDate" class="form-label">@Localizer["FromDateNepali"]:</label>
+                <InputText @bind-Value="dailyTransaction.NpTransactionFromDate" class="form-control shadow-none" id="NpTransactionFromDate" placeholder="Select Nepali Date" />
+            </div>
+            <div class="mb-3 col-4">
+                <label for="NpTransactionToDate" class="form-label">@Localizer["ToDateNepali"]:</label>
+                <InputText @bind-Value="dailyTransaction.NpTransactionToDate" class="form-control shadow-none" id="NpTransactionToDate" placeholder="Select Nepali Date" />
+            </div>
+            <div class="col-4 mt-4">
+                <button type="submit" class="btn btn-primary shadow-none">Submit</button>
+                <a href="dailytransaction/list" class="btn btn-secondary shadow-none">Back to List</a>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+
+@if (dailytransactions == null)
+{
+    <p><em> </em></p>
+}
+else if (dailytransactions.Any())
+{
+    <Card>
+        <CardHeader>Income Expenditure</CardHeader>
+        <CardBody>
+            @{ 
+                var groupedTransactions = dailytransactions.GroupBy(t => t.NpTransactionDate);
+            }
+
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Transactions</h6>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th colspan="5">Income</th>
+                                <th> </th>
+                                <th colspan="4">Expenditure</th>
+                            </tr>                            
+                            <tr>
+                                <th>@Localizer["Date"]</th>
+                                <th>@Localizer["Particular"]</th>
+                                <th>@Localizer["Bank"]</th>
+                                <th>@Localizer["PaymentType"]</th>
+                                <th class="text-end">@Localizer["Amount"]</th>
+                                <th>Balance</th>
+                                <th>@Localizer["Particular"]</th>
+                                <th>@Localizer["Bank"]</th>
+                                <th>@Localizer["PaymentType"]</th>
+                                <th class="text-end">@Localizer["Amount"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var group in groupedTransactions)
+                            {
+                                var inTransactions = group.Where(t => t.InOut == TransactionType.In).ToList();
+                                var outTransactions = group.Where(t => t.InOut == TransactionType.Out).ToList();
+                                var maxRows = Math.Max(inTransactions.Count, outTransactions.Count);
+                                var inTransactionsAmount = group.Where(t => t.InOut == TransactionType.In).Sum(t => t.Amount);
+                                var outTransactionsAmount = group.Where(t => t.InOut == TransactionType.Out).Sum(t => t.Amount);
+                                var balance = inTransactionsAmount - outTransactionsAmount;
+
+                                @for (var i = 0; i < maxRows; i++)
+                                {
+                                    <tr>
+                                        <td>@(i == 0 ? group.Key : null)</td>
+                                        @if (i < inTransactions.Count)
+                                        {
+                                            <td>@inTransactions[i].Particular</td>
+                                            <td>@inTransactions[i].BankName</td>
+                                            <td>@inTransactions[i].PaymentMode</td>
+                                            <td class="text-end">@inTransactions[i].Amount</td>
+                                        }
+                                        else
+                                        {
+                                            <td colspan="4"></td>
+                                        }
+                                        <td>@(i == 0 ? balance : null)</td>
+
+                                        @if (i < outTransactions.Count)
+                                        {
+                                            <td>@outTransactions[i].Particular</td>
+                                            <td>@outTransactions[i].BankName</td>
+                                            <td>@outTransactions[i].PaymentMode</td>
+                                            <td class="text-end">@outTransactions[i].Amount</td>
+                                        }
+                                        else
+                                        {
+                                            <td colspan="4"></td>
+                                        }
+                                    </tr>
+                                }
+                                <tr>
+                                    <th colspan="2" class="text-center"><strong>@group.Key</strong></th>
+                                    <th colspan="3" class="text-end">@inTransactionsAmount</th>
+                                    <th class="text-end">@balance</th>
+                                    <th colspan="4" class="text-end">@outTransactionsAmount</th>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="2">Total Income</th>
+                                <th colspan="3" class="text-end">@dailytransactions.Where(t => t.InOut == TransactionType.In).Sum(t => t.Amount)</th>
+                                <th>
+                                    @(dailytransactions.Where(t => t.InOut == TransactionType.In).Sum(t => t.Amount) - dailytransactions.Where(t => t.InOut == TransactionType.Out).Sum(t => t.Amount))
+                                </th>
+                                <th colspan="2">Total Expenditure</th>
+                                <th colspan="2" class="text-end">@dailytransactions.Where(t => t.InOut == TransactionType.Out).Sum(t => t.Amount)</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </CardBody>
+    </Card>
+}
+else
+{
+    <p>No daily transactions found</p>
+}
+
+<script>
+function initializeNepaliCalendars(fromElementId, toElementId) {
+    var fromElement = document.getElementById(fromElementId);
+    var toElement = document.getElementById(toElementId);
+
+    if (fromElement) {
+        fromElement.nepaliDatePicker({
+            onChange: function() {
+                var bsDate = fromElement.value;
+                DotNet.invokeMethodAsync('Accounting', 'UpdateTransactionSearchFromDate', bsDate).catch(err => console.error(err));
+            }
+        });
+    }
+
+    if (toElement) {
+        toElement.nepaliDatePicker({
+            onChange: function() {
+                var bsDate = toElement.value;
+                DotNet.invokeMethodAsync('Accounting', 'UpdateTransactionSearchToDate', bsDate).catch(err => console.error(err));
+            }
+        });
+    }
+}
+</script>
+
+@code {
+    private static DailyTransactionSearchVM dailyTransaction = new();
+    private List<DailyTransactionVM> dailytransactions = null;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initializeNepaliCalendars", "NpTransactionFromDate", "NpTransactionToDate");
+        }
+    }
+
+    private async Task SearchDailyTransaction()
+    {
+        try
+        {
+            var transactions = await DailyTransactionRepo.GetDailyTransactionsByDateAsync(dailyTransaction.NpTransactionFromDate, dailyTransaction.NpTransactionToDate);
+            dailytransactions = transactions.ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching daily transactions: {ex.Message}");
+        }
+    }
+
+    [JSInvokable]
+    public static void UpdateTransactionSearchFromDate(string fromDate)
+    {
+        dailyTransaction.NpTransactionFromDate = fromDate;
+    }
+
+    [JSInvokable]
+    public static void UpdateTransactionSearchToDate(string toDate)
+    {
+        dailyTransaction.NpTransactionToDate = toDate;
+    }
+}

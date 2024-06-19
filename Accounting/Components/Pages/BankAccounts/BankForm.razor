@@ -1,0 +1,100 @@
+﻿@inject IBankAccountRepo BankAccountRepo
+@inject IStringLocalizer<Accounting.Locales.AppResource> Localizer
+
+
+@if (BankAccount is not null)
+{
+    <div class="container">
+        <EditForm Enhance="true" method="post" FormName="AddOrEditBankAccountForm" OnValidSubmit="AddOrEditBankAccount" Model="BankAccount" autocomplete="off">
+
+            @if (IsEditMode)
+            {
+                <input type="hidden" name="BankAccount.Id" value="@BankAccount.Id" />
+
+            }
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <label for="FirstName" class="form-label">
+                        @Localizer["Name"] 
+                    </label>
+                    <InputText @bind-Value="BankAccount.BankName" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => BankAccount.BankName)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="Email" class="form-label">
+                        @Localizer["AccountNo"]
+                    </label>
+                    <InputText @bind-Value="BankAccount.AccountNo" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => BankAccount.AccountNo)" />
+                </div>
+
+
+
+
+
+                <div class="mb-3 col-4">
+                    <label for="Status" class="form-label">
+                        @Localizer["Status"]
+                    </label>
+                    <InputCheckbox @bind-Value="BankAccount.Status" class="form-check-input">
+
+                    </InputCheckbox>
+                    <ValidationMessage For="@(() => BankAccount.Status)" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <button class="btn btn-primary shadow-none mb-3">
+                        Submit
+                    </button>
+                    <a href="bankaccount/list" class="btn btn-secondary shadow-none mb-3"> Back to List</a>
+                </div>
+
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+            </div>
+
+        </EditForm>
+    </div>
+
+}
+
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int BankAccountId { get; set; }
+
+    [Parameter]
+    public EventCallback<BankAccount> OnValidBankAccountSubmit { get; set; }
+
+    [SupplyParameterFromForm]
+    public BankAccount? BankAccount { get; set; }
+
+    private string Title => IsEditMode ? $"Edit BankAccount {BankAccount?.Id}" : "Add New BankAccount";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+
+            BankAccount = await BankAccountRepo.GetBankAccountAsync(BankAccountId);
+
+
+        }
+        else
+        {
+            BankAccount ??= new();
+
+        }
+
+
+    }
+
+    private async Task AddOrEditBankAccount()
+    {
+        await OnValidBankAccountSubmit.InvokeAsync(BankAccount);
+    }
+}

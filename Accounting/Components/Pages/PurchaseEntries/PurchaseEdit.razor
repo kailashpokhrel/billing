@@ -1,0 +1,51 @@
+﻿@page "/purchase/edit/{id:int}"
+@inject IPurchaseEntryRepo PurchaseEntryRepo
+@inject ICustomerRepo CustomerRepo
+@inject IPurchaseItemRepo PurchaseItemRepo
+@inject NavigationManager NavigationManager
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["EditPurchaseEntry"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["EditPurchaseEntry"]
+    </CardHeader>
+    <CardBody>
+        <PurchaseEntryForm IsEditMode="true" PurchaseEntryId="@Id" OnValidPurchaseEntrySubmit="EditPurchaseEntry" />
+    </CardBody>
+</Card>
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+
+    private async Task EditPurchaseEntry(PurchaseEntry purchase)
+    {
+        try
+        {
+            PreloadService.Show();
+            purchase.ModifiedDate = DateTime.Today;
+            purchase.ModifiedBy = "Admin";
+            purchase.PaymentStatus = "UnPaid";
+            purchase.ProjectDepartment = "Sales";
+
+            var billingId =  await PurchaseEntryRepo.UpdateAsync(purchase);
+          
+            ToastService.Notify(new (ToastType.Success, $"Purchase entry saved successfully."));
+            await Task.Delay(2000);
+            //NavigationManager.NavigateTo("/purchaseentries");
+            NavigationManager.NavigateTo("/printreceipt");
+
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new (ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

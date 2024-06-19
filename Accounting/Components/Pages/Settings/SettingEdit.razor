@@ -1,0 +1,44 @@
+﻿@page "/setting/edit/{id:int}"
+@inject ISettingRepo SettingRepo
+@inject NavigationManager NavigationManager
+@inject ToastService ToastService
+@inject PreloadService PreloadService
+
+<PageTitle>Edit Setting</PageTitle>
+
+
+    <Card>
+        <CardHeader>
+            Edit Setting
+        </CardHeader>
+        <CardBody>
+            <SettingForm IsEditMode="true" Id="@Id"   OnValidSettingSubmit="UpdateSetting" />
+        </CardBody>
+    </Card>
+
+
+@code {
+    [Parameter] 
+    public int Id { get; set; }
+
+    private async Task UpdateSetting(Setting updatedSetting)
+    {
+        try
+        {
+            PreloadService.Show();
+
+            await SettingRepo.UpdateSettingAsync(updatedSetting);
+            ToastService.Notify(new ToastMessage(ToastType.Success, "Setting updated successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/settings");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(new ToastMessage(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

@@ -1,0 +1,47 @@
+﻿@page "/chartofaccount/edit/{id:int}"
+@inject IChartOfAccountRepo ChartOfAccountRepo
+@inject NavigationManager NavigationManager
+
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["EditChartAccount"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["EditChartAccount"]
+    </CardHeader>
+    <CardBody>
+        <ChartForm IsEditMode="true" ChartAccountId="@Id" OnValidChartAccountSubmit="EditChartOfAccount" />
+    </CardBody>
+</Card>
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    
+    
+    private async Task EditChartOfAccount(ChartOfAccount chartaccount)
+    {
+        try
+        {
+            PreloadService.Show();
+            
+            
+            await ChartOfAccountRepo.UpdateChartOfAccountAsync(chartaccount);
+            ToastService.Notify(new(ToastType.Success, $"Chart Of Account saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo("/chartofaccounts");
+
+        }
+        catch (Exception ex)
+        {
+
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

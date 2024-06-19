@@ -1,0 +1,122 @@
+﻿@inject IPartyRepo PartyRepo
+@inject IStringLocalizer<Accounting.Locales.AppResource> Localizer
+
+@if (Party is not null)
+{
+    <div class="container">
+        <EditForm Enhance="true" method="post" FormName="AddOrEditPartyForm" OnValidSubmit="AddOrEditParty" Model="Party" autocomplete="off">
+
+            @if (IsEditMode)
+            {
+                <input type="hidden" name="Party.PartyID" value="@Party.PartyID" />
+            }
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <label for="Name" class="form-label">
+                        @Localizer["PartyName"]
+                    </label>
+                    <InputText @bind-Value="Party.Name" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => Party.Name)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="Phone" class="form-label">
+                        @Localizer["Phone"]
+                    </label>
+                    <InputText @bind-Value="Party.Phone" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => Party.Phone)" />
+                </div>
+                <div class="mb-3 col-4">
+                    <label for="Address" class="form-label">
+                        @Localizer["Address"]
+                    </label>
+                    <InputText @bind-Value="Party.Address" class="form-control shadow-none" required></InputText>
+                    <ValidationMessage For="@(() => Party.Address)" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <label for="ContactName" class="form-label">
+                        @Localizer["ContactName"]
+                    </label>
+                    <InputText @bind-Value="Party.ContactName" class="form-control shadow-none"></InputText>
+                    <ValidationMessage For="@(() => Party.ContactName)" />
+                </div>
+
+                <div class="mb-3 col-4">
+                    <label for="Email" class="form-label">
+                        @Localizer["Email"]
+                    </label>
+                    <InputText @bind-Value="Party.Email" class="form-control shadow-none"></InputText>
+                    <ValidationMessage For="@(() => Party.Email)" />
+                </div>
+                <div class="mb-3 col-4">
+                    <label for="Pan" class="form-label">
+                        @Localizer["Pan"]
+                    </label>
+                    <InputText @bind-Value="Party.Pan" class="form-control shadow-none"></InputText>
+                    <ValidationMessage For="@(() => Party.Pan)" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <InputCheckbox class="form-check-input" @bind-Value="Party.IsVendor" /> Is Vendor
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <label class="form-check-label">
+                        <InputCheckbox class="form-check-input" @bind-Value="Party.IsCustomer" /> Is Customer
+                    </label>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="mb-3 col-4">
+                    <button class="btn btn-primary shadow-none mb-3">
+                        Submit
+                    </button>
+                    <a href="party" class="btn btn-secondary shadow-none mb-3"> Back to List</a>
+                </div>
+
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public int PartyID { get; set; }
+
+    [Parameter]
+    public EventCallback<Party> OnValidPartySubmit { get; set; }
+
+    [SupplyParameterFromForm]
+    public Party? Party { get; set; }
+
+    private string Title => IsEditMode ? $"Edit Party {Party?.PartyID}" : "Add New Party";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+            Party = await PartyRepo.GetPartyByIdAsync(PartyID);
+        }
+        else
+        {
+            Party ??= new();
+        }
+    }
+
+    private async Task AddOrEditParty()
+    {
+        await OnValidPartySubmit.InvokeAsync(Party);
+    }
+}

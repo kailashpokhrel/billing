@@ -1,0 +1,48 @@
+﻿@page "/dailytransaction/edit/{id:int}"
+@inject IDailyTransactionRepo DailyTransactionRepo
+@inject NavigationManager NavigationManager
+
+
+@using System.Security.Claims;
+
+<PageTitle>@Localizer["EditDailyTransaction"]</PageTitle>
+<Card>
+    <CardHeader>
+        @Localizer["EditDailyTransaction"]
+    </CardHeader>
+    <CardBody>
+        <DailyTransactionForm IsEditMode="true" DailyTransactionId="@Id" OnValidDailyTransactionSubmit="EditDailyTransaction" />
+    </CardBody>
+</Card>
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    
+    
+    private async Task EditDailyTransaction(DailyTransaction dailytransaction)
+    {
+        try
+        {
+            PreloadService.Show();
+            
+            
+            await DailyTransactionRepo.UpdateDailyTransactionAsync(dailytransaction);
+            ToastService.Notify(new(ToastType.Success, $"DailyTransaction saved successfully."));
+            await Task.Delay(2000);
+            NavigationManager.NavigateTo($"/dailytransactions/{dailytransaction.NpTransactionDate}");
+
+        }
+        catch (Exception ex)
+        {
+            // handle exception
+
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}

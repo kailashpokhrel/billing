@@ -1,0 +1,118 @@
+﻿@page "/customers"
+@inject ICustomerRepo CustomerRepo
+@inject NavigationManager NavigationManager
+
+<PageTitle>Customer List</PageTitle>
+<Card>
+    <CardHeader>
+        Customer List <a href="/customer/create" class="btn btn-primary shadow-none  float-end">
+            Add New
+        </a>
+    </CardHeader>
+    <CardBody>
+
+
+
+
+        <ConfirmDialog @ref="dialog" />
+
+        @if (customers == null)
+        {
+            <p>Loading...</p>
+        }
+        else if (!customers.Any())
+        {
+            <p>No customers found.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Customer ID</th>
+                        <th>@Localizer["Name"]</th>
+                        <th>@Localizer["Mobile"]</th>
+                        <th>@Localizer["Email"]</th>
+                        <th>@Localizer["Address"]</th>
+                        <th>@Localizer["Action"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var customer in customers)
+                    {
+                        <tr>
+                            <td>@customer.CustomerId</td>
+                            <td>@customer.Name</td>
+                            <td>@customer.Mobile</td>
+                            <td>@customer.Email</td>
+                            <td>@customer.Address</td>
+                            <td>
+                                <Button onclick="@(() => OpenEditForm(customer.CustomerId))" Size="Size.Small" Color="ButtonColor.Primary">Edit</Button>
+
+                                <EditForm Model="customer" OnValidSubmit="@(() => DeleteCustomer(customer.CustomerId))">
+
+                                    <Button Color="ButtonColor.Danger" Size="Size.Small" Type="ButtonType.Submit">Delete</Button>
+
+                                </EditForm>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </CardBody>
+</Card>
+@code {
+    private IEnumerable<Customer> customers;
+    [Inject] protected ToastService ToastService { get; set; }
+    [Inject] protected PreloadService PreloadService { get; set; } = default!;
+    private ConfirmDialog dialog = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        customers = await CustomerRepo.GetAllAsync();
+    }
+    private void OpenEditForm(int transactionId)
+    {
+        NavigationManager.NavigateTo($"/customer/edit/{transactionId}");
+    }
+
+    private async void DeleteCustomer(int transactionId)
+    {
+        try
+        {
+            var confirmation = await dialog.ShowAsync(
+                title: "Are you sure you want to delete this?",
+                message1: "This will delete the record. Once deleted can not be rolled back.",
+                message2: "Do you want to proceed?");
+
+            if (confirmation)
+            {
+                if (transactionId > 0)
+                {
+                    PreloadService.Show();
+                    await CustomerRepo.DeleteAsync(transactionId);
+                    ToastService.Notify(new(ToastType.Success, $"Customer deleted successfully."));
+
+                    customers ??= (await CustomerRepo.GetAllAsync()).ToList();
+
+                    await Task.Delay(2000);
+                    NavigationManager.NavigateTo($"/customers");
+                }
+            }
+            else
+            {
+                // do something
+            }
+        }
+        catch (Exception ex)
+        {
+            // handle exception
+            ToastService.Notify(new(ToastType.Danger, $"Error: {ex.Message}."));
+        }
+        finally
+        {
+            PreloadService.Hide();
+        }
+    }
+}
